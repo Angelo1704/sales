@@ -4,7 +4,7 @@ const Sequelize = require("sequelize");
 class Seller extends Sequelize.Model {
     static init(sequelize){
         super.init({
-            nome: Sequelize.STRING,
+            name: Sequelize.STRING,
             email: Sequelize.STRING,
             password: Sequelize.STRING,
         },
@@ -14,7 +14,7 @@ class Seller extends Sequelize.Model {
         );
     }
     static associate(model){
-        this.hasMany(model.Sale, { foreignKey : sellerId });
+        this.hasMany(model.Sale, { foreignKey : "sellerId" });
     }
 }
 

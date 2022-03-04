@@ -14,7 +14,7 @@ class Sale extends Sequelize.Model {
         );
     }
     static associate(model){
-        this.belongsTo(model.Seller, { foreignKey : sellerId });
+        this.belongsTo(model.Seller, { foreignKey : "sellerId" });
     }
 }
 
