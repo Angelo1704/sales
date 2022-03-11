@@ -4,6 +4,28 @@ const Sale = require("../database/models/Sale");
 const res = require("express/lib/response");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
+const Joi = require("joi");
+
+
+function newSellerValidation(req, res){
+    const body = req.body;
+    const schema = Joi.object().keys({
+        name : Joi.string().required(),
+        email: Joi.string()
+        .email({
+            minDomainSegments: 2,
+            tlds: {allow: ["com", "net", "br" ]},
+        })
+        .required(),
+        password: Joi.string()
+        .min(8)
+        .pattern(/^([\d]+[a-z]|[a-z]+[\d])[\da-z]*$/i)
+        .required(),
+    });
+    const {error, value} = schema.validate(body);
+    if(error){ console.log(error.details); return {validator: false, error: error.details}}
+    else return {validator: true,value};
+}
 
 function passwordValidation(password){
     if(password.length < 8)
@@ -56,25 +78,29 @@ module.exports = {
         }
     },
     async newSeller(req, res){
-        const {name, email, password } = req.body;
-        if(!name || !email || !password){
-            res.status(400).json({ msg : "Dados obrigatorios não foram preenchidos"});
-        }
-        const passwordValid = passwordValidation(password);
-        if(passwordValid !== "OK")
-        return res.status(400).json({msg: passwordValid});
+
+        try {
+            const {validator, value, error} = newSellerValidation(req,res);
+            if(!validator){
+                return res
+                .status(422)
+                .json({
+                    msg: "Dados inválidos",
+                    error: error[0].message
+                });
+            }
 
         const isSellerNew = await Seller.findOne({
-            where: {email},
+            where: {email : value.email},
         });
         if (isSellerNew)
             res.status(403).json({msg : "Vendedor ja foi cadastrado"});
         else{
             const salt = bcrypt.genSaltSync(12);
-            const hash = bcrypt.hashSync(password, salt);
+            const hash = bcrypt.hashSync(value.password, salt);
             const seller = await Seller.create({
-                name,
-                email,
+                name: value.name,
+                email: value.email,
                 password: hash,
             }).catch((error) => {
                 res.status(500).json({msg: "Não foi possivel inserir os dados"});
@@ -83,6 +109,10 @@ module.exports = {
                 res.status(201).json({msg : "Novo vendedor foi adicionado"});
             else
                 res.status(404).json({msg : "Não foi possivel cadastrar novo paciente"});
+        }
+        }catch(error){
+            console.log(error);
+            res.status(500).json({ msg: "Não foi possivel inserir os dados"});
         }
     },
     async deleteSeller( req, res){
